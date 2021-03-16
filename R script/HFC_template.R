@@ -160,33 +160,6 @@ library(RColorBrewer)
 library(psych)
 library(lubridate)
 
-# setting user path
-
-user_path <- function() {
-  # Return a hardcoded path that depends on the current user, or the current 
-  # working directory for an unrecognized user. If the path isn't readable,
-  # stop.
-  
-  user <- Sys.info()["user"]
-  
-  if (user == "james") 
-  {
-    path = "~/r-resources"
-    file.exists
-  } else if (user == "Krishanu_Chakrobarty") 
-  {
-    path = "D:/R/HFC/HFC-2"
-  } else {
-    warning("No path found for current user (", user, ")")
-    path = getwd()
-  }
-  
-  stopifnot(file.exists(path))
-  return(path)
-}
-
-setwd(user_path())  # setting the working directory as required
-
 # getting the data
 
 dummy_data <- read.dta("R script/dummy_main.dta")
@@ -244,6 +217,12 @@ aggr(dummy_data)
 
 sum(duplicated(dummy_data$surveyor_id))
 
+#Not that this is useful, but if you wanted to run this on all variables, 
+#this is how you would do it.
+
+sapply(dummy_data, function(x) sum(duplicated(x))) %>%
+  as.data.frame()
+
 # The output is 458, or the number of rows with a surveyor ID that has already
 # been seen. 
 
@@ -257,6 +236,8 @@ dummy_data <- dummy_data %>%
 # finding the number of duplicates. 
 
 sum(dummy_data$dup > 0)
+
+##J What this is doing doesn't seem to be what it says it's doing. 
 
 # Please note that the Stata template shows this as 481 instead of 483. The same output can 
 # also be achieved easily but is not mandatory for high frequency checks.
@@ -294,10 +275,12 @@ variable_list_using <- setdiff(names(dummy_data_temp), "surveyor_id")
 # necessary variables from using data 
 
 duplicate_names <- intersect(variable_list_master, variable_list_using)
+
 if (length(duplicate_names) > 0) {
   print(paste("The following variable(s) have the same name in master and using:",
               paste(duplicate_names, collapse = ", ")))
 }
+
 
 # Alternate longer way to implement the same:
 
@@ -318,7 +301,12 @@ if (length(duplicate_names) > 0) {
 
 #----------------------------- Date and Time Checks ---------------------------------------#
 
-# In R, there are two basic classes of date/times. Class "POSIXct" represents the (signed) number of seconds since the beginning of 1970 (in the UTC time zone) as a numeric vector. "POSIXct" is more convenient for including in data frames, and "POSIXlt" is closer to human-readable forms. A virtual class "POSIXt" exists from which both of the classes inherit: it is used to allow operations such as subtraction to mix the two classes.
+# In R, there are two basic classes of date/times. Class "POSIXct" represents 
+#the (signed) number of seconds since the beginning of 1970 (in the UTC time zone) 
+#as a numeric vector. "POSIXct" is more convenient for including in data frames, 
+#and "POSIXlt" is closer to human-readable forms. A virtual class "POSIXt" exists 
+#from which both of the classes inherit: it is used to allow operations such as 
+#subtraction to mix the two classes.
 # 
 # Logical comparisons and some arithmetic operations are available for both classes. 
 # One can add or subtract a number of seconds from a date-time object, but not add two dat
@@ -328,7 +316,8 @@ if (length(duplicate_names) > 0) {
 
 ############### Surveys that don't end on the same day as they started ##############
 
-# Let us check for the surveys which do not end on the same day as they started. In most cases these types of surveys are a cause of concern.
+# Let us check for the surveys which do not end on the same day as they started. 
+#In most cases these types of surveys are a cause of concern.
 
 subset(subset(dummy_data, as_date(dummy_data$starttime) != as_date(dummy_data$endtime), select= c("surveyor_id", "starttime","endtime", "name")))
 
@@ -350,11 +339,16 @@ subset(subset(dummy_data, as.Date(dummy_data$starttime, "%m/%d/%y") < as.Date("4
 
 subset(subset(dummy_data, as.Date(dummy_data$starttime) > Sys.Date()), select= c("surveyor_id", "starttime","endtime"))
 
-# Question 9: When dealing with live survey data, the default columns starttime and endtime can be very deceptive sometimes. Can you think about what problem may arise and how do you go about solving the same?
+# Question 9: When dealing with live survey data, the default columns starttime 
+#and endtime can be very deceptive sometimes. Can you think about what problem may 
+#arise and how do you go about solving the same?
 
 #--------------------------- Distribution ------------------------------------------#
 
-# Checking distributions across all variables / major variables let us know critical problems with one/ more variable. Also, at a very early stage, the distributions help us detect problem with the survey design / data collection. This is one of the most important daily checks.
+# Checking distributions across all variables / major variables let us know critical 
+#problems with one/ more variable. Also, at a very early stage, the distributions 
+#help us detect problem with the survey design / data collection. This is one of the 
+#most important daily checks.
 
 ############################# Missing Values ########################################
 
@@ -372,17 +366,28 @@ signif(colMeans(dummy_data[sapply(dummy_data, is.character)] == "") * 100, digit
 
 # Now, applying the same logic for numeric variables
 
-print("Displaying percent missing in numeric variables") 
+"Displaying percent missing in numeric variables"
 signif(colMeans(is.na(dummy_data[!sapply(dummy_data, is.character)])) * 100, digits = 2)
 
 # Question 10 : Can you think of any other way to implement the same? [hint : Loops again, 
 # if sapply seems counter- intuitive]
 
+#Here's how I would do it. Maybe a bit cleaner/easy to follow?
+
+dummy_data %>%
+  select(where(is.numeric)) %>%
+  sapply(function(x) mean(is.na(x)) * 100) %>%
+  as.data.frame() 
+
+
 ########################### Number of distinct values ###############################
 
 # Pay attention to variables with very few distinct values. 
-# Lack of variation in variables is an important flag to be raised and discussed with the PIs. 
+# Lack of variation in variables is an important flag to be raised and discussed with 
+#the PIs. 
+
 n_distinct_no_na <- function(x) n_distinct(x[!is.na(x)])
+
 sapply(dummy_data, n_distinct_no_na)
 
 ####### Distribution of specific coded values (don't know, refused, other etc.) #####
@@ -408,8 +413,8 @@ signif(colMeans(dummy_data[sapply(dummy_data, is.character)] == "-999", na.rm =
 
 ################################### Outliers ########################################
 
-# Outliers in key variables gives us a sense of the values which are potentially misrecorded/
-# problemmatic, indicating the need for further probing and cross-validation
+# Outliers in key variables gives us a sense of the values which are potentially 
+#misrecorded/problemmatic, indicating the need for further probing and cross-validation
 
 # Here argument "z" is used while using the scores function. Appropriate custom functions 
 # can also be defined.
@@ -444,7 +449,8 @@ for (i in 1:length(scores_outliers)) {
 
 #----------------------------- Survey Duration -------------------------------------#
 
-# It is better to create separate variables as described in answer to Question 9 and then subsequently calculate the survey duration to avoid any erroneous results. 
+# It is better to create separate variables as described in answer to Question 9 
+#and then subsequently calculate the survey duration to avoid any erroneous results. 
 
 ########################## Calculating Duration #####################################
 
@@ -460,9 +466,23 @@ for (i in 1:length(duration_outliers)) {
   }
 }
 
+#J Let's try to do the above in a manner that's slightly more intuitive (at least for me)
+
+ungroup(dummy_data)
+
+dummy_data %>%
+  mutate(duration = round(as.numeric(endtime - starttime)),
+         outliers = scores(duration, type = "z")) %>% 
+  select(outliers, duration) %>%
+  filter(outliers > abs(2)) 
+  
+
+
+
 #------------------------ Enumerator checks ----------------------------------------#
 
-# As a practice, we should look at enumerator level checks. Also, we may extend this for enumerator pairs or enumerator teams.
+# As a practice, we should look at enumerator level checks. Also, we may extend this 
+#for enumerator pairs or enumerator teams.
 
 ################### Enumerator level average survey duration ########################
 
@@ -687,4 +707,4 @@ ggplot(dummy_data, aes(dummy_data$surveydate)) +
 
 # Try with other theme plots! Maybe NYT and/or World Bank
 
-# End
+# Endd
