@@ -147,6 +147,7 @@
 # install.packages(c("foreign", "haven","dplyr", "VIM", "outliers", "ggplot2", "scales", "grid", "RColorBrewer", "psych", "lubridate", "ggthemes"), dependencies=TRUE, INSTALL_opts = c('--no-lock'))
 # load the required packages
 
+
 library(foreign)
 library(haven)
 library(dplyr)
@@ -188,9 +189,7 @@ setwd(user_path())  # setting the working directory as required
 
 # getting the data
 
-dummy_data <- read.dta("dummy_main.dta")
-
-# Question 3: Can you think of any other way to load .dta files?
+dummy_data <- read.dta("R script/dummy_main.dta")
 
 #------------------------------------ 1. Unique ID checks -------------------------------#
 
@@ -208,17 +207,17 @@ sapply(dummy_data[,variable_names], function(x) sum(is.na(x)))
 
 # The output lists down the missing values for the specified variables: surveyor_id and name. # There are 1 missing value in surveyor_id and no value is missing in name.
 
-# Question 4: Can you think of another way to implement the above operation?
-
 # To see all values that are missing for each of the variable in the data frame:
 
 sapply(dummy_data, function(x) sum(is.na(x)))
 
-# Question 5: Can you think of another way to emulate the sapply? [Hint : Loops]
-
 # Suppose, we want to see the number of values which are missing as a percentage
 
 signif(colMeans(is.na(dummy_data)) * 100, digits = 2)
+
+sapply(dummy_data, function(x) mean(is.na(x)) * 100) %>%
+  as.data.frame() %>%
+  round(digits = 2)
 
 # Question 6: Can you find out an alternate way to emulate the same function? Using dplyr?
 
@@ -234,7 +233,8 @@ dummy_data[is.na(dummy_data$surveyor_id), c("surveyor_id", "starttime")]
 
 
 # Bonus Tip : To see the structure of missing values in the data frame
-# graphically we can use the aggr function from the VIM package. As you can see, the output is a graph that shows proportion of missing values for each of the variables in the dataset.
+# graphically we can use the aggr function from the VIM package. As you can see, the output 
+#is a graph that shows proportion of missing values for each of the variables in the dataset.
 
 aggr(dummy_data)
 
@@ -250,7 +250,7 @@ sum(duplicated(dummy_data$surveyor_id))
 # To see the number of surveyor IDs that appear more than once:
 
 dummy_data <- dummy_data %>%
-  arrange(surveyor_id) %>%                ## sorted by surveyor id
+  #arrange(surveyor_id) %>%                ## sorted by surveyor id ## this is unnecessary
   group_by(surveyor_id) %>%               ## grouped by surveyor id 
   mutate(dup = row_number())
 
